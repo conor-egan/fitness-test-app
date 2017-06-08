@@ -14,7 +14,7 @@ json.JSONEncoder.default = JSONEncoder_newdefault
 
 @application.route('/users', methods=['GET', 'POST', ' PUT', 'DELETE'])
 def all_user_data():
-    dynamodb = resource('dynamodb')
+    dynamodb = resource('dynamodb', region_name='eu-west-1')
     table = dynamodb.Table('User')
     if request.method == 'GET':
         response = table.scan()
@@ -54,5 +54,5 @@ def single_user_data(Username):
 
 
 if __name__ == "__main__":
-    application.run()
+    application.run('0.0.0.0')
 
