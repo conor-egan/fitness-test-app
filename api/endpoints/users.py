@@ -1,10 +1,12 @@
 from boto3 import resource
-from flask import json, request, abort
-from flask import Flask
 from decimal import Decimal
-from user_helper import SignUpCredential, LoginCredential, User
+from flask import request, json, abort
+from flask_restplus import Resource
+from models import User, LoginCredential, SignUpCredential
+from api.restplus import api
 
-application = Flask(__name__)
+ns = api.namespace('users', description='Operations related to users')
+
 
 JSONEncoder_olddefault = json.JSONEncoder.default
 
@@ -22,37 +24,36 @@ user_table = dynamodb.Table('User')
 program_table = dynamodb.Table('Programs')
 
 
-@application.route('/users', methods=['GET', 'POST'])
-def users():
-    if request.method == 'GET':
+@ns.route('/')
+class Users(Resource):
+    def get(self):
         return users_get()
-    elif request.method == 'POST':
+    def post(self):
         return user_login()
 
-
-@application.route('/users/<string:Username>', methods=['GET', 'PUT', 'DELETE'])
-def user(Username):
-    if request.method == 'GET':
+@ns.route('/<string:Username>')
+class User(Resource):
+    def get(self, Username):
         return user_get(Username)
-    elif request.method == 'PUT':
+    def put(self, Username):
         return create_user(Username)
-    elif request.method == 'DELETE':
+    def delete(self, Username):
         return delete_user(Username)
 
-@application.route('/users/<string:Username>/programs', methods=['GET'])
-def user_programs(Username):
-    # This would probably query a separate table to the User table and
-    # return more detailed results
-    return json.jsonify(get_user_programs(Username))
+@ns.route('/<string:Username>/programs')
+class UserPrograms(Resource):
+    def get(self, Username):
+        # This would probably query a separate table to the User table and
+        # return more detailed results
+        return json.jsonify(get_user_programs(Username))
 
 
-@application.route('/users/<string:Username>/programs/<string:program_name>', methods=['GET'])
-def user_program_details(Username, program_name):
-    # This would probably query a separate table to the User table and
-    # return more detailed results
-    return get_user_program(Username, program_name)
-
-# below are the helper methods
+@ns.route('/<string:Username>/programs/<string:program_name>')
+class UserProgramDetails(Resource):
+    def get(self, Username, program_name):
+        # This would probably query a separate table to the User table and
+        # return more detailed results
+        return get_user_program(Username, program_name)
 
 
 def users_get():
@@ -60,8 +61,9 @@ def users_get():
     item = response['Items']
     users = list()
     for user in item:
-        user_obj = User(user['Username'], user['fullname'], user['email'], user['liftmaxes'], user['programs'])
-        users.append(user_obj.to_dict())
+        user_obj = {'Username': user['Username'], 'fullname': user['fullname'], 'email': user['email'],
+                   'liftmaxes': user['liftmaxes'], 'programs': user['programs']}
+        users.append(user_obj)
 
     return json.jsonify(users)
 
@@ -133,6 +135,3 @@ def get_user_response(Username):
         }
     )
     return response
-
-if __name__ == "__main__":
-    application.run('0.0.0.0')
