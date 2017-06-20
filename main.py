@@ -3,8 +3,10 @@ from flask import json, request, abort
 from flask import Flask
 from decimal import Decimal
 from user_helper import SignUpCredential, LoginCredential, User
+from flask_restplus import Api, Resource, fields
 
 application = Flask(__name__)
+api = Api(application)
 
 JSONEncoder_olddefault = json.JSONEncoder.default
 
@@ -22,35 +24,49 @@ user_table = dynamodb.Table('User')
 program_table = dynamodb.Table('Programs')
 
 
-@application.route('/users', methods=['GET', 'POST'])
-def users():
-    if request.method == 'GET':
+resource_fields = api.model('login_credential', {
+    'username': fields.String,
+    'password': fields.String
+})
+
+
+
+@api.route('/users', methods=['GET', 'POST'])
+class Users(Resource):
+    def get(self):
         return users_get()
-    elif request.method == 'POST':
+
+    @api.expect(resource_fields)
+    def post(self):
         return user_login()
 
 
-@application.route('/users/<string:Username>', methods=['GET', 'PUT', 'DELETE'])
-def user(Username):
-    if request.method == 'GET':
+@api.route('/users/<string:Username>', methods=['GET', 'PUT', 'DELETE'])
+class User(Resource):
+    def get(self, Username):
         return user_get(Username)
-    elif request.method == 'PUT':
+
+    def put(self, Username):
         return create_user(Username)
-    elif request.method == 'DELETE':
+
+    def delete(self, Username):
         return delete_user(Username)
 
-@application.route('/users/<string:Username>/programs', methods=['GET'])
-def user_programs(Username):
+
+@api.route('/users/<string:Username>/programs', methods=['GET'])
+class UserPrograms(Resource):
     # This would probably query a separate table to the User table and
     # return more detailed results
-    return json.jsonify(get_user_programs(Username))
+    def get(self, Username):
+        return json.jsonify(get_user_programs(Username))
 
 
-@application.route('/users/<string:Username>/programs/<string:program_name>', methods=['GET'])
-def user_program_details(Username, program_name):
+@api.route('/users/<string:Username>/programs/<string:program_name>', methods=['GET'])
+class UserProgramDetails(Resource):
     # This would probably query a separate table to the User table and
     # return more detailed results
-    return get_user_program(Username, program_name)
+    def get(self, Username, program_name):
+        return get_user_program(Username, program_name)
 
 # below are the helper methods
 
@@ -60,8 +76,9 @@ def users_get():
     item = response['Items']
     users = list()
     for user in item:
-        user_obj = User(user['Username'], user['fullname'], user['email'], user['liftmaxes'], user['programs'])
-        users.append(user_obj.to_dict())
+        user_obj = {'Username': user['Username'], 'fullname': user['fullname'],
+                    'email': user['email'], 'liftmaxes': user['liftmaxes'], 'programs': user['programs']}
+        users.append(user_obj)
 
     return json.jsonify(users)
 

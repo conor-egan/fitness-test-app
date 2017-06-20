@@ -36,7 +36,6 @@ class User(object):
         self.liftmaxes = liftmaxes
         self.programs = programs
 
-
     def to_dict(self):
         user_dict = {'Username': self.username, 'fullname': self.fullname, 'email': self.email,
                      'liftmaxes': self.liftmaxes, 'programs': self.programs}
