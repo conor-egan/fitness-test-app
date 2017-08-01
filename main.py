@@ -34,7 +34,9 @@ resource_fields = api.model('login_credential', {
 @api.route('/users', methods=['GET', 'POST'])
 class Users(Resource):
     def get(self):
-        return users_get()
+        resp = users_get()
+        resp.headers['Access-Control-Allow-Origin'] = '*'
+        return resp
 
     @api.expect(resource_fields)
     def post(self):
